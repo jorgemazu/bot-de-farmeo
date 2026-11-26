@@ -1,5 +1,5 @@
-/* Bot de farmeo 1.0.21-pwa — scope /bot-de-farmeo/ — cache de assets, nunca la API de keepalive */
-const CACHE = "bf-pwa-1.0.21";
+/* Bot de farmeo 1.0.22-pwa — scope /bot-de-farmeo/ — cache de assets, nunca la API de keepalive */
+const CACHE = "bf-pwa-1.0.22";
 const PRECACHE = [
   "/bot-de-farmeo/",
   "/bot-de-farmeo/index.html",
