@@ -45,6 +45,10 @@
   button.gold { color: #1a1208; }
   .card { display: block; width: 100%; text-align: left; border: 1px solid #2a241c; background: #1a1612; border-radius: 16px; padding: 12px; margin-top: 8px; }
   button.card { color: inherit; }
+
+  .lider-linea { margin: 6px 0 0; font-size: 13px; color: #d4b06a; font-weight: 650; text-transform: none; letter-spacing: 0; }
+  .card-acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .card-acts button { width: 100%; height: auto; min-height: 40px; margin: 0; padding: 6px 4px; font-size: 12px; line-height: 1.15; white-space: normal; }
   .hit { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; color: inherit; }
   .acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .acts .mini { width: 100%; flex: none; height: 40px; margin: 0; font-size: 14px; }
@@ -193,13 +197,14 @@
 </head>
 <body>
 <div id="app"></div>
-<script>window.MU_MASTER = true; window.APP_VERSION = "1.0.18-pwa"; window.APP_CODE = 54; window.PWA = true;</script>
+<script>window.MU_MASTER = true; window.APP_VERSION = "1.0.21-pwa"; window.APP_CODE = 57; window.PWA = true;</script>
 <script src="hc-ini.js"></script>
 <script src="editor-secciones.js"></script>
 <script src="editor-mapa.js"></script>
 <script src="combos.js"></script>
 <script src="i18n-ui.js"></script>
 <script src="farm-formato.js"></script>
+<script src="lider-ficha.js"></script>
 <script src="app.js"></script>
 
 <script>
