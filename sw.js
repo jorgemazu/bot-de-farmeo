@@ -1,22 +1,22 @@
-/* Bot de farmeo 1.0.22-pwa — scope /bot-de-farmeo/ — cache de assets, nunca la API de keepalive */
-const CACHE = "bf-pwa-1.0.22";
+/* Bot de farmeo 1.0.23-pwa — cache de assets, nunca la API de keepalive */
+const CACHE = "bf-pwa-1.0.23";
 const PRECACHE = [
-  "/bot-de-farmeo/",
-  "/bot-de-farmeo/index.html",
-  "/bot-de-farmeo/manifest.json",
-  "/bot-de-farmeo/app.js",
-  "/bot-de-farmeo/hc-ini.js",
-  "/bot-de-farmeo/editor-secciones.js",
-  "/bot-de-farmeo/editor-mapa.js",
-  "/bot-de-farmeo/combos.js",
-  "/bot-de-farmeo/i18n-ui.js",
-  "/bot-de-farmeo/farm-formato.js",
-  "/bot-de-farmeo/lider-ficha.js",
-  "/bot-de-farmeo/apple-touch-icon.png",
-  "/bot-de-farmeo/icon-192.png",
-  "/bot-de-farmeo/icon-512.png",
-  "/bot-de-farmeo/icon-192-maskable.png",
-  "/bot-de-farmeo/icon-512-maskable.png"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./app.js",
+  "./hc-ini.js",
+  "./editor-secciones.js",
+  "./editor-mapa.js",
+  "./combos.js",
+  "./i18n-ui.js",
+  "./farm-formato.js",
+  "./lider-ficha.js",
+  "./apple-touch-icon.png",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-192-maskable.png",
+  "./icon-512-maskable.png"
 ];
 
 self.addEventListener("install", function (e) {
@@ -54,7 +54,7 @@ self.addEventListener("fetch", function (e) {
         return res;
       }).catch(function () {
         return caches.match(req).then(function (hit) {
-          return hit || caches.match("/bot-de-farmeo/index.html");
+          return hit || caches.match("./index.html");
         });
       })
     );

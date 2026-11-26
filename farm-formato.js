@@ -118,6 +118,22 @@
     return parseFarmColumna(v.farm_texto || v.texto || "");
   }
 
+  function mucResetDe(v) {
+    /* Devuelve {texto, valor} o null si la API no mandó el campo (keepalive < 1.6.69). */
+    if (!v || typeof v !== "object") return null;
+    var tiene = Object.prototype.hasOwnProperty.call(v, "muc_reset")
+      || Object.prototype.hasOwnProperty.call(v, "muc_reset_texto");
+    if (!tiene) return null;
+    var texto = v.muc_reset_texto != null ? String(v.muc_reset_texto) : "";
+    var valor = null;
+    if (v.muc_reset != null && v.muc_reset !== "") {
+      valor = typeof v.muc_reset === "number" ? v.muc_reset : parseWanYi(v.muc_reset);
+    } else if (texto) {
+      valor = parseWanYi(texto);
+    }
+    return { texto: texto, valor: valor };
+  }
+
   root.FARM_FMT = {
     CAMPOS: CAMPOS,
     ETIQUETAS: ETIQUETAS,
@@ -125,6 +141,7 @@
     formatNumeroCl: formatNumeroCl,
     parseFarmColumna: parseFarmColumna,
     farmValores: farmValores,
+    mucResetDe: mucResetDe,
     milesCl: milesCl
   };
 })(typeof window !== "undefined" ? window : typeof globalThis !== "undefined" ? globalThis : this);

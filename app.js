@@ -553,11 +553,29 @@
     return F ? F.formatNumeroCl(valor) : String(valor == null ? "" : valor);
   }
 
+  function htmlMucReset(v) {
+    const F = farmFmt();
+    if (!F || typeof F.mucResetDe !== "function") return "";
+    const mr = F.mucResetDe(v);
+    if (!mr) return "";
+    let txt = "";
+    if (mr.valor != null && isFinite(mr.valor)) {
+      txt = F.formatNumeroCl(mr.valor);
+    } else if (mr.texto) {
+      txt = mr.texto;
+    }
+    if (txt === "" && !(mr.valor === 0)) return "";
+    if (mr.valor === 0) txt = F.formatNumeroCl(0);
+    return '<span class="muc-reset"><span class="fl">' + esc(t("muc_reset")) + "</span> " + esc(txt) + "</span>";
+  }
+
   function htmlFarmLinea(v) {
     const F = farmFmt();
+    const mucHtml = htmlMucReset(v);
     if (!F) {
       const raw = farmTexto(v);
-      return raw ? ('<span class="farm">' + esc(raw) + "</span>") : "";
+      const farm = raw ? ('<span class="farm">' + esc(raw) + "</span>") : "";
+      return mucHtml + farm;
     }
     const d = F.farmValores(v);
     const partes = [];
@@ -568,8 +586,8 @@
       if (txt === "") return;
       partes.push('<span class="farm-item"><span class="fl">' + esc(t(F.ETIQUETAS[i])) + "</span> " + esc(txt) + "</span>");
     });
-    if (!partes.length) return "";
-    return '<span class="farm">' + partes.join("") + "</span>";
+    const farm = partes.length ? ('<span class="farm">' + partes.join("") + "</span>") : "";
+    return mucHtml + farm;
   }
 
   function htmlFarmEncabezado() {

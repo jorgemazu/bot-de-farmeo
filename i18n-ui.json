@@ -798,5 +798,10 @@
     "en": "Restarting tasks…",
     "es": "Reiniciando tareas…",
     "zh": "正在重置任务…"
+  },
+  "muc_reset": {
+    "en": "MUC reset",
+    "es": "MUC reset",
+    "zh": "今增货币"
   }
 }
