@@ -34,7 +34,8 @@
     pedirSalir: false,
     totalMuc: null,
     respaldos: [],
-    pedirRestaurar: null
+    pedirRestaurar: null,
+    modalCopiar: null
   };
 
   function esc(s) {
@@ -48,11 +49,20 @@
     return state.idioma || "en";
   }
 
+  function aplicarNombreServidor2() {
+    (state.servidores || []).forEach(function (s) {
+      const id = String(s.id || "").toLowerCase();
+      const host = String(s.host || "").toLowerCase();
+      if (id === "servidor2" || host === "servidor2.farmboss.stream") s.nombre = t("server2_name");
+    });
+  }
+
   function setIdioma(v) {
     if (v !== "en" && v !== "es" && v !== "zh") v = "en";
     state.idioma = v;
     try { localStorage.setItem(KEY_IDIOMA, v); } catch (e) {}
     try { document.documentElement.lang = (v === "zh") ? "zh-CN" : v; } catch (e) {}
+    aplicarNombreServidor2();
   }
 
   function t(key, vars) {
@@ -127,12 +137,8 @@
     if (!tieneS2) {
       lista.unshift({ id: "servidor2", nombre: t("server2_name"), host: "servidor2.farmboss.stream", token: "", cuenta: "", dispositivo: "" });
     }
-    lista.forEach(function (s) {
-      const id = String(s.id || "").toLowerCase();
-      const host = String(s.host || "").toLowerCase();
-      if (id === "servidor2" || host === "servidor2.farmboss.stream") s.nombre = t("server2_name");
-    });
     state.servidores = lista;
+    aplicarNombreServidor2();
     saveServers();
     try { state.cuenta = localStorage.getItem(KEY_CUENTA) || ""; } catch (e) { state.cuenta = ""; }
   }
@@ -154,6 +160,9 @@
   }
 
   function baseUrl(srv) {
+    if (typeof window.BF_API_BASE === "string" && window.BF_API_BASE.trim()) {
+      return String(window.BF_API_BASE).trim().replace(/\/$/, "");
+    }
     let h = String((srv && srv.host) || "").trim();
     h = h.replace(/^https?:\/\//i, "").replace(/\/$/, "");
     return "https://" + h;
@@ -738,9 +747,17 @@ function renderVentanas() {
       const titulo = v.nombre ? (v.n + " — " + v.nombre) : String(v.n);
       const est = etiquetaEstado(v.estado);
       const farmHtml = htmlFarmLinea(v);
-      return '<button class="card" type="button" data-n="' + esc(v.n) + '"><div class="name"><strong>' +
+      const liderNom = nombreLiderFicha(v);
+      const liderHtml = liderNom ? ('<p class="lider-linea">' + esc(t("leader_line", { nombre: liderNom })) + "</p>") : "";
+      return '<div class="card" data-n="' + esc(v.n) + '"><button class="hit" type="button" data-abrir-ventana="' +
+        esc(v.n) + '"><div class="name"><strong>' +
         esc(titulo) + "</strong>" + farmHtml + '<span class="estado ' + esc(v.estado) + '">' + esc(est) +
-        "</span></div><p class=\"fecha\">" + (v.existe_ini ? t("ini_ready") : t("no_ini")) + "</p></button>";
+        "</span></div>" + liderHtml + "<p class=\"fecha\">" + (v.existe_ini ? t("ini_ready") : t("no_ini")) +
+        '</p></button><div class="card-acts">' +
+        '<button class="line" type="button" data-acc="iniciar" data-acc-n="' + esc(v.n) + '">' + esc(t("win_start")) + "</button>" +
+        '<button class="danger" type="button" data-acc="detener" data-acc-n="' + esc(v.n) + '">' + esc(t("win_stop")) + "</button>" +
+        '<button class="line" type="button" data-acc="reiniciar" data-acc-n="' + esc(v.n) + '">' + esc(t("win_restart_tasks")) + "</button>" +
+        "</div></div>";
     }).join("");
     const muc = totalMucTexto();
     const mucHtml = muc ? ('<p class="total-muc">' + esc(t("total_muc", { texto: muc })) + "</p>") : "";
@@ -762,9 +779,49 @@ function renderVentanas() {
       state.aviso = "";
       render();
     };
-    document.querySelectorAll("[data-n]").forEach(function (btn) {
-      btn.onclick = function () { abrirVentana(Number(btn.getAttribute("data-n"))); };
+    document.querySelectorAll("[data-abrir-ventana]").forEach(function (btn) {
+      btn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        abrirVentana(Number(btn.getAttribute("data-abrir-ventana")));
+      };
     });
+    document.querySelectorAll("[data-acc]").forEach(function (btn) {
+      btn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        accionarVentana(btn.getAttribute("data-acc"), Number(btn.getAttribute("data-acc-n")));
+      };
+    });
+  }
+
+  function nombreLiderFicha(v) {
+    const todas = (state.ventanasTodas && state.ventanasTodas.length) ? state.ventanasTodas : (state.ventanas || []);
+    const union = todas.concat(state.ventanas || []);
+    if (window.LIDER_FICHA && typeof window.LIDER_FICHA.resolverLider === "function") {
+      return window.LIDER_FICHA.resolverLider(v, union);
+    }
+    return (v && v.lider_nombre) ? String(v.lider_nombre).trim() : null;
+  }
+
+  async function accionarVentana(acc, n) {
+    const srv = state.servidor;
+    const rutas = { iniciar: "/v1/ventana/iniciar", detener: "/v1/ventana/detener", reiniciar: "/v1/ventana/reiniciar-tareas" };
+    const path = rutas[acc];
+    if (!path || !srv || !n) return;
+    state.aviso = "";
+    try {
+      const data = await api(srv, path + "?n=" + encodeURIComponent(n), { method: "POST", body: { n: n }, timeout: 30000 });
+      if (data && data.ok === false) throw new Error(data.mensaje || t("action_failed", { msg: "" }));
+      try {
+        const vs = await api(srv, "/v1/ventanas");
+        aplicarVentanas(vs);
+      } catch (e2) {}
+      if (data && data.mensaje) state.aviso = data.mensaje;
+    } catch (e) {
+      state.aviso = e.message || String(e);
+    }
+    if (state.pantalla === "editor") return;
+    state.pantalla = "ventanas";
+    render();
   }
 
   async function abrirVentana(n) {
@@ -1221,6 +1278,75 @@ function renderVentanas() {
       body + "</div>";
   }
 
+
+  function destinosCopia() {
+    const n = Number(state.ventana && state.ventana.n);
+    const lista = (state.ventanasTodas && state.ventanasTodas.length) ? state.ventanasTodas : (state.ventanas || []);
+    return lista.filter(function (v) { return Number(v.n) !== n; });
+  }
+
+  function nombreVentanaCopia(v) {
+    if (!v) return "";
+    return v.nombre ? (v.n + " — " + v.nombre) : t("copy_window_n", { n: v.n });
+  }
+
+  function modalCopiarHtml() {
+    const m = state.modalCopiar;
+    if (!m) return "";
+    const tabs = (state.mapa && state.mapa.tabs) || [];
+    const dests = destinosCopia();
+    const tabsHtml = tabs.map(function (tb) {
+      const on = !m.todas && (m.pestanas || []).indexOf(tb.id) >= 0;
+      const nom = pickLoc(tb, "nombre_en", "nombre_es", "nombre_zh") || tb.nombre || tb.id;
+      return '<label class="sub" style="display:block;margin:4px 0"><input type="checkbox" data-copia-tab="' + esc(tb.id) + '"' + (on ? " checked" : "") + (m.todas ? " disabled" : "") + "> " + esc(nom) + "</label>";
+    }).join("");
+    const destHtml = dests.length ? dests.map(function (v) {
+      const on = (m.destinos || []).indexOf(Number(v.n)) >= 0 || (m.destinos || []).indexOf(String(v.n)) >= 0;
+      return '<label class="sub" style="display:block;margin:4px 0"><input type="checkbox" data-copia-dest="' + esc(v.n) + '"' + (on ? " checked" : "") + "> " + esc(nombreVentanaCopia(v)) + "</label>";
+    }).join("") : ('<p class="sub">' + esc(t("copy_none_dest")) + "</p>");
+    const resumen = m.confirmar ? ('<p>' + esc(t("copy_summary", {
+      tabs: m.todas ? t("copy_all_tabs") : (m.pestanas || []).join(", "),
+      origen: (state.ventana && state.ventana.n) || "",
+      destinos: (m.destinos || []).join(", ")
+    })) + "</p>") : "";
+    return '<div class="modal-salir" id="modalCopiar"><div class="modal-salir-caja" style="max-height:80vh;overflow:auto">' +
+      "<h2 style=\"margin:0 0 10px;font-size:18px\">" + esc(t("copy_title")) + "</h2>" +
+      '<p class="sub">' + esc(t("copy_identity_note")) + "</p>" +
+      '<p class="lbl">' + esc(t("copy_tabs")) + "</p>" +
+      '<label class="sub" style="display:block;margin:4px 0 8px"><input type="checkbox" id="copiaTodas"' + (m.todas ? " checked" : "") + "> " + esc(t("copy_all_tabs")) + "</label>" +
+      tabsHtml +
+      '<p class="lbl" style="margin-top:10px">' + esc(t("copy_destinations")) + "</p>" +
+      (dests.length ? ('<button class="line" type="button" id="copiaSelTodas" style="margin-bottom:8px">' + esc(t("copy_select_all_dest")) + "</button>") : "") +
+      destHtml + resumen +
+      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="gold" type="button" id="copiaOk">' + esc(m.confirmar ? t("copy_confirm") : t("copy")) + "</button>" +
+      '<button class="line" type="button" id="copiaCancel">' + esc(t("copy_cancel")) + "</button>" +
+      "</div></div></div>";
+  }
+
+  function abrirModalCopiar() {
+    const tab = state.tab || ((state.mapa && state.mapa.tabs && state.mapa.tabs[0] && state.mapa.tabs[0].id) || "TAB1");
+    state.modalCopiar = { todas: false, pestanas: [tab], destinos: [], confirmar: false };
+    render();
+  }
+
+  function leerModalCopiarDom(m) {
+    if (!m) return m;
+    const todasEl = document.getElementById("copiaTodas");
+    m.todas = !!(todasEl && todasEl.checked);
+    const pest = [];
+    document.querySelectorAll("[data-copia-tab]").forEach(function (el) {
+      if (el.checked) pest.push(el.getAttribute("data-copia-tab"));
+    });
+    m.pestanas = pest;
+    const dest = [];
+    document.querySelectorAll("[data-copia-dest]").forEach(function (el) {
+      if (el.checked) dest.push(Number(el.getAttribute("data-copia-dest")));
+    });
+    m.destinos = dest;
+    return m;
+  }
+
   function renderEditor() {
     const v = state.ventana || {};
     const titulo = v.nombre ? (v.n + " — " + v.nombre) : t("window_n", { n: (v.n || "") });
@@ -1262,8 +1388,9 @@ function renderVentanas() {
       (cargando ? ('<p class="sub">' + esc(t("loading")) + "</p>") : "") + "</header>" +
       '<div class="tabs">' + tabBtns + "</div>" +
       '<section class="pad lista-campos">' + lista + htmlRespaldos() + "</section>" +
-      modalSalirHtml() + modalRestaurarHtml() +
-      '<div class="fijo"><button class="gold" id="guardar" type="button"' + (ocupado || !nCambios ? " disabled" : "") + ">" +
+      modalSalirHtml() + modalRestaurarHtml() + modalCopiarHtml() +
+      '<div class="fijo"><button class="line" id="copiarIni" type="button"' + (ocupado ? " disabled" : "") + ">" + esc(state.ocupado === "copiar" ? t("copying") : t("copy")) + "</button>" +
+      '<button class="gold" id="guardar" type="button"' + (ocupado || !nCambios ? " disabled" : "") + ">" +
       textoBoton + "</button>" +
       (nCambios ? ('<button class="line" id="descartarCambios" type="button">' + esc(t("discard_changes")) + "</button>") : "") +
       "</div>" + htmlCoordOverlay();
@@ -1409,6 +1536,42 @@ function renderVentanas() {
       render();
     };
     const g = document.getElementById("guardar");
+
+    const cbtn = document.getElementById("copiarIni");
+    if (cbtn) cbtn.onclick = function () { abrirModalCopiar(); };
+    const mc = document.getElementById("modalCopiar");
+    if (mc && state.modalCopiar) {
+      const cancel = document.getElementById("copiaCancel");
+      if (cancel) cancel.onclick = function () { state.modalCopiar = null; render(); };
+      const todas = document.getElementById("copiaTodas");
+      if (todas) todas.onchange = function () {
+        state.modalCopiar = leerModalCopiarDom(state.modalCopiar || {});
+        state.modalCopiar.confirmar = false;
+        render();
+      };
+      document.querySelectorAll("[data-copia-tab],[data-copia-dest]").forEach(function (el) {
+        el.onchange = function () {
+          state.modalCopiar = leerModalCopiarDom(state.modalCopiar || {});
+          state.modalCopiar.confirmar = false;
+        };
+      });
+      const sel = document.getElementById("copiaSelTodas");
+      if (sel) sel.onclick = function () {
+        state.modalCopiar = leerModalCopiarDom(state.modalCopiar || {});
+        state.modalCopiar.destinos = destinosCopia().map(function (v) { return Number(v.n); });
+        state.modalCopiar.confirmar = false;
+        render();
+      };
+      const ok = document.getElementById("copiaOk");
+      if (ok) ok.onclick = function () {
+        const m = leerModalCopiarDom(state.modalCopiar || {});
+        if (!m.todas && !(m.pestanas && m.pestanas.length)) { state.avisoTipo = "error"; state.aviso = t("copy_none_tabs"); render(); return; }
+        if (!(m.destinos && m.destinos.length)) { state.avisoTipo = "error"; state.aviso = t("copy_none_dest"); render(); return; }
+        if (!m.confirmar) { m.confirmar = true; state.modalCopiar = m; render(); return; }
+        state.modalCopiar = m;
+        copiarIni();
+      };
+    }
     if (g) g.onclick = guardarIni;
   }
 
@@ -1442,6 +1605,49 @@ function renderVentanas() {
     } catch (e) {
       state.avisoTipo = "error";
       state.aviso = t("restore_failed", { msg: (e && e.message) || String(e) });
+    } finally {
+      limpiarOcupado();
+    }
+    try { render(); } catch (eRender1) { limpiarOcupado(); }
+  }
+
+
+  async function copiarIni() {
+    const srv = state.servidor;
+    const n = state.ventana && state.ventana.n;
+    const m = state.modalCopiar || {};
+    const destinos = (m.destinos || []).map(Number).filter(function (d) { return d && d !== Number(n); });
+    if (!destinos.length) {
+      state.avisoTipo = "error";
+      state.aviso = t("copy_none_dest");
+      render();
+      return;
+    }
+    const body = { origen: n, destinos: destinos, cuenta: state.cuenta };
+    if (m.todas) body.todas = true;
+    else body.pestanas = m.pestanas || [];
+    state.ocupado = "copiar";
+    state.aviso = "";
+    state.avisoTipo = "";
+    try {
+      try { render(); } catch (eRender0) {}
+      const data = await api(srv, "/v1/ini/copiar", { method: "POST", body: body, timeout: 90000 });
+      if (!data || data.ok === false) throw new Error((data && data.mensaje) || t("copy_failed", { msg: "" }));
+      state.avisoTipo = "ok";
+      state.aviso = data.mensaje || t("copy_ok");
+      if (data.aviso) state.aviso += " " + data.aviso;
+      state.modalCopiar = null;
+      const otra = await api(srv, "/v1/ini?n=" + encodeURIComponent(n));
+      if (otra && otra.ok) state.ini = otra;
+      const vs = await api(srv, "/v1/ventanas");
+      if (vs && (vs.ventanas || vs.ventanas_todas)) {
+        aplicarVentanas(vs);
+        state.ventana = (state.ventanas || []).find((x) => Number(x.n) === Number(n)) || state.ventana;
+      }
+      await cargarRespaldos(n);
+    } catch (e) {
+      state.avisoTipo = "error";
+      state.aviso = t("copy_failed", { msg: (e && e.message) || String(e) });
     } finally {
       limpiarOcupado();
     }
@@ -1514,12 +1720,12 @@ function renderVentanas() {
     if (window.Nativo) window.Nativo.instalar();
   });
 
+  loadServers();
   (function () {
     let v = "en";
     try { v = localStorage.getItem(KEY_IDIOMA) || "en"; } catch (e) { v = "en"; }
     setIdioma(v);
   })();
-  loadServers();
   state.pantalla = state.cuenta ? "servidores" : "login";
   render();
   if (window.__BF_TEST) {
@@ -1534,6 +1740,8 @@ function renderVentanas() {
       render: render,
       api: api,
       guardarIni: guardarIni,
+      copiarIni: copiarIni,
+      abrirModalCopiar: abrirModalCopiar,
       restaurarIni: restaurarIni,
       cargarRespaldos: cargarRespaldos,
       farmTexto: farmTexto,
@@ -1547,7 +1755,9 @@ function renderVentanas() {
       descartarCambiosPendientes: descartarCambiosPendientes,
       salirDelEditor: salirDelEditor,
       atrasSistema: atrasSistema,
-      hayCambiosPendientes: hayCambiosPendientes
+      hayCambiosPendientes: hayCambiosPendientes,
+      accionarVentana: accionarVentana,
+      nombreLiderFicha: nombreLiderFicha
     };
   }
   if (!window.PWA && window.Nativo && window.Nativo.revisar) window.Nativo.revisar();
