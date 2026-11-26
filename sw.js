@@ -1,5 +1,5 @@
-/* Bot de farmeo 1.0.18-pwa — scope /bot-de-farmeo/ — cache de assets, nunca la API de keepalive */
-const CACHE = "bf-pwa-1.0.18";
+/* Bot de farmeo 1.0.21-pwa — scope /bot-de-farmeo/ — cache de assets, nunca la API de keepalive */
+const CACHE = "bf-pwa-1.0.21";
 const PRECACHE = [
   "/bot-de-farmeo/",
   "/bot-de-farmeo/index.html",
@@ -11,6 +11,7 @@ const PRECACHE = [
   "/bot-de-farmeo/combos.js",
   "/bot-de-farmeo/i18n-ui.js",
   "/bot-de-farmeo/farm-formato.js",
+  "/bot-de-farmeo/lider-ficha.js",
   "/bot-de-farmeo/apple-touch-icon.png",
   "/bot-de-farmeo/icon-192.png",
   "/bot-de-farmeo/icon-512.png",
@@ -53,7 +54,7 @@ self.addEventListener("fetch", function (e) {
         return res;
       }).catch(function () {
         return caches.match(req).then(function (hit) {
-          return hit || caches.match("./index.html");
+          return hit || caches.match("/bot-de-farmeo/index.html");
         });
       })
     );
