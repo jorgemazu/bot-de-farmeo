@@ -4217,6 +4217,15 @@
           "etiqueta_zh": "商城买技能学：伤害反射"
         },
         {
+          "clave": "取消点击复活",
+          "tipo": "check",
+          "etiqueta": "No revivir con un clic",
+          "txt": "取消点击复活",
+          "etiqueta_es": "No revivir con un clic",
+          "etiqueta_en": "Don't one-click revive",
+          "etiqueta_zh": "取消点击复活"
+        },
+        {
           "clave": "烈光闪",
           "tipo": "check",
           "etiqueta": "Destello ardiente",
