@@ -1,0 +1,44 @@
+{
+  "name": "Bot de farmeo",
+  "short_name": "Farmeo",
+  "description": "Editor de ventanas de Servidor 2, para iPhone.",
+  "start_url": "/bot-de-farmeo/",
+  "scope": "/bot-de-farmeo/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#100e0c",
+  "theme_color": "#100e0c",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/bot-de-farmeo/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/bot-de-farmeo/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/bot-de-farmeo/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/bot-de-farmeo/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/bot-de-farmeo/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
